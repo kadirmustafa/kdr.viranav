@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:viranav/core/theme/theme_provider.dart';
 import 'package:viranav/core/theme/app_theme.dart';
+import 'package:viranav/core/localization/app_localizations.dart';
 import 'package:viranav/core/providers/navigation_providers.dart';
 import 'package:viranav/features/logbook/domain/trip.dart';
 
@@ -17,6 +18,7 @@ class LogbookScreen extends ConsumerStatefulWidget {
 class _LogbookScreenState extends ConsumerState<LogbookScreen> {
   List<Trip> _trips = [];
   bool _isLoading = true;
+  bool _isStopping = false;
 
   @override
   void initState() {
@@ -26,48 +28,58 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
 
   Future<void> _loadTrips() async {
     setState(() => _isLoading = true);
-    final repo = ref.read(tripRepositoryProvider);
-    final list = await repo.getAllTrips();
-    setState(() {
-      _trips = list;
-      _isLoading = false;
-    });
+    try {
+      final repo = ref.read(tripRepositoryProvider);
+      final list = await repo.getAllTrips();
+      if (mounted) {
+        setState(() {
+          _trips = list;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _showStartTripDialog() {
+    final s = ref.read(stringsProvider);
     final vessel = ref.read(vesselProvider);
     final textController = TextEditingController(
-      text: 'Bodrum - Gökova Seyri',
+      text: s.tripNameDefault,
     );
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Yeni Seyir Başlat'),
+        title: Text(s.newTripDialogTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Ekran kapalıyken bile arka planda her 5 saniyede bir GPS noktası yerel veritabanına kaydedilir.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            Text(
+              s.newTripDialogDesc,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: textController,
-              decoration: const InputDecoration(
-                labelText: 'Seyir Adı / Rota',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: s.tripNameLabel,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 10),
-            Text('Tekne: ${vessel.name}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            Text(
+              '${s.vesselLabel}: ${vessel.name}',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('İptal'),
+            child: Text(s.cancelButton),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -77,25 +89,74 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
                 await ref.read(trackingServiceProvider).startTrip(
                   tripId: tripId,
                   title: textController.text.trim().isEmpty
-                      ? 'Seyir'
+                      ? s.tripNameDefault
                       : textController.text.trim(),
                   vesselName: vessel.name,
                 );
                 await _loadTrips();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Seyir kaydı arka planda başlatıldı!')),
+                    SnackBar(content: Text(s.tripStartedMsg)),
                   );
                 }
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Hata: $e')),
+                    SnackBar(content: Text('${s.tripErrorMsg}$e')),
                   );
                 }
               }
             },
-            child: const Text('Seyre Başla'),
+            child: Text(s.startButton),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmAndStopTrip() {
+    final s = ref.read(stringsProvider);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(s.stopTripConfirmTitle),
+        content: Text(s.stopTripConfirmDesc),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(s.cancelButton),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(() => _isStopping = true);
+              try {
+                final finished = await ref.read(trackingServiceProvider).stopTrip();
+                await _loadTrips();
+                if (mounted) {
+                  setState(() => _isStopping = false);
+                  final dist = finished?.totalDistanceNm.toStringAsFixed(2) ?? '0.00';
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${s.tripEndedMsg}$dist NM, GPX ✓'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  setState(() => _isStopping = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${s.tripErrorMsg}$e')),
+                  );
+                }
+              }
+            },
+            child: Text(s.stopTripConfirmButton),
           ),
         ],
       ),
@@ -105,16 +166,18 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isNightVision = ref.watch(themeModeProvider) == NavThemeMode.nightVisionRed;
+    final s = ref.watch(stringsProvider);
+    final isNightVision = ref.watch(isNightVisionProvider);
     final trackingState = ref.watch(trackingStateStreamProvider).value ??
         ref.read(trackingServiceProvider).currentState;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SEYİR DEFTERİ (LOGBOOK)'),
+        title: Text(s.logbookTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
             onPressed: _loadTrips,
           ),
         ],
@@ -149,7 +212,7 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                trackingState.isTracking ? 'SEYİR KAYDI AKTİF' : 'SEYİR DURUMU',
+                                trackingState.isTracking ? s.tripActive : s.tripStatus,
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                               ),
                             ],
@@ -163,7 +226,7 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              trackingState.isTracking ? '5s GPS Kayıt' : 'Beklemede',
+                              trackingState.isTracking ? '5s GPS' : s.tripIdle,
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -176,12 +239,12 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
                       const SizedBox(height: 12),
                       if (trackingState.isTracking) ...[
                         Text(
-                          trackingState.currentTrip?.title ?? 'Aktif Seyir',
+                          trackingState.currentTrip?.title ?? s.tripNameDefault,
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Kaydedilen Nokta: ${trackingState.pointsLogged}  |  Anlık Hız: ${trackingState.currentSogKnots.toStringAsFixed(1)} kn',
+                          '${s.points}: ${trackingState.pointsLogged}  |  SOG: ${trackingState.currentSogKnots.toStringAsFixed(1)} kn',
                           style: const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                         const SizedBox(height: 14),
@@ -191,30 +254,26 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.redAccent,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
                             ),
-                            icon: const Icon(Icons.stop),
-                            label: const Text('SEYRİ TAMAMLA VE GPX ÇIKAR'),
-                            onPressed: () async {
-                              final messenger = ScaffoldMessenger.of(context);
-                              final finished = await ref.read(trackingServiceProvider).stopTrip();
-                              await _loadTrips();
-                              if (mounted && finished != null) {
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Seyir tamamlandı! Mesafe: ${finished.totalDistanceNm.toStringAsFixed(2)} NM, GPX hazırlandı.',
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
+                            icon: _isStopping
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.stop),
+                            label: Text(
+                              _isStopping ? '...' : s.stopTrip,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            onPressed: _isStopping ? null : _confirmAndStopTrip,
                           ),
                         ),
                       ] else ...[
-                        const Text(
-                          'Yeni bir seyre başlayarak rotanızı çevrimdışı kaydedebilir, bittiğinde GPX ve Cloudflare R2 yedeklemesi alabilirsiniz.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        Text(
+                          s.newTripDialogDesc,
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                         const SizedBox(height: 14),
                         SizedBox(
@@ -223,10 +282,13 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: isNightVision ? AppTheme.nightRedPrimary : AppTheme.neonCyan,
                               foregroundColor: isNightVision ? Colors.white : AppTheme.navyBackground,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
                             ),
                             icon: const Icon(Icons.play_arrow),
-                            label: const Text('YENİ SEYİR BAŞLAT', style: TextStyle(fontWeight: FontWeight.bold)),
+                            label: Text(
+                              s.startNewTrip,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
                             onPressed: _showStartTripDialog,
                           ),
                         ),
@@ -240,12 +302,12 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'GEÇMİŞ SEYİRLER',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                  Text(
+                    s.pastTrips,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1.0),
                   ),
                   Text(
-                    '${_trips.length} Kayıt',
+                    '${_trips.length} ${s.tripCount}',
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
@@ -262,7 +324,7 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
                       children: [
                         Icon(Icons.menu_book, size: 48, color: Colors.grey.withValues(alpha: 0.5)),
                         const SizedBox(height: 12),
-                        const Text('Henüz kaydedilmiş bir seyir yok.', style: TextStyle(color: Colors.grey)),
+                        Text(s.noTripsYet, style: const TextStyle(color: Colors.grey)),
                       ],
                     ),
                   ),
@@ -275,7 +337,7 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final trip = _trips[index];
-                    return _buildTripCard(trip, isNightVision);
+                    return _buildTripCard(trip, isNightVision, s);
                   },
                 ),
             ],
@@ -285,7 +347,7 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
     );
   }
 
-  Widget _buildTripCard(Trip trip, bool isNightVision) {
+  Widget _buildTripCard(Trip trip, bool isNightVision, AppStrings s) {
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
     return Card(
       child: Padding(
@@ -299,7 +361,7 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
                 Expanded(
                   child: Text(
                     trip.title,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
                 if (trip.isSynced)
@@ -309,7 +371,7 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
                       color: Colors.green.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Text('R2 Bulut Senkron', style: TextStyle(fontSize: 10, color: Colors.greenAccent)),
+                    child: Text(s.r2Synced, style: const TextStyle(fontSize: 10, color: Colors.greenAccent)),
                   ),
               ],
             ),
@@ -322,25 +384,26 @@ class _LogbookScreenState extends ConsumerState<LogbookScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildTripMetric('Mesafe', '${trip.totalDistanceNm.toStringAsFixed(1)} NM'),
-                _buildTripMetric('Max SOG', '${trip.maxSpeedKnots.toStringAsFixed(1)} kn'),
-                _buildTripMetric('Ortalama', '${trip.avgSpeedKnots.toStringAsFixed(1)} kn'),
-                _buildTripMetric('Nokta', '${trip.totalPointsCount}'),
+                _buildTripMetric(s.distance, '${trip.totalDistanceNm.toStringAsFixed(1)} NM'),
+                _buildTripMetric(s.maxSog, '${trip.maxSpeedKnots.toStringAsFixed(1)} kn'),
+                _buildTripMetric(s.avgSog, '${trip.avgSpeedKnots.toStringAsFixed(1)} kn'),
+                _buildTripMetric(s.points, '${trip.totalPointsCount}'),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton.icon(
                   icon: const Icon(Icons.share, size: 16),
-                  label: const Text('GPX Paylaş', style: TextStyle(fontSize: 12)),
+                  label: Text(s.shareGpx, style: const TextStyle(fontSize: 12)),
                   onPressed: () async {
                     await ref.read(tripRepositoryProvider).shareGpx(trip.id);
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                  tooltip: s.deleteTrip,
                   onPressed: () async {
                     await ref.read(tripRepositoryProvider).deleteTrip(trip.id);
                     await _loadTrips();

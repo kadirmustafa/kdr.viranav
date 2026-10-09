@@ -42,9 +42,10 @@ final trackingServiceProvider = Provider<TrackingService>((ref) {
   return service;
 });
 
-final trackingStateStreamProvider = StreamProvider<TrackingState>((ref) {
+final trackingStateStreamProvider = StreamProvider<TrackingState>((ref) async* {
   final service = ref.watch(trackingServiceProvider);
-  return service.stateStream;
+  yield service.currentState;
+  yield* service.stateStream;
 });
 
 final sensorsServiceProvider = Provider<SensorsService>((ref) {

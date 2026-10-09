@@ -90,6 +90,7 @@ class TripRepository {
     final gpxXml = GpxGenerator.generateGpx(trip: updatedTrip, points: points);
 
     // Upload to Cloudflare R2 Worker endpoint (Zero cost Spark/R2 tier)
+    // Non-blocking with 3s timeout so offline/slow connections never freeze the finish flow
     try {
       final workerUrl = dotenv.env['CLOUDFLARE_WORKER_URL'] ??
           'https://marine-api.viranav.workers.dev';
@@ -100,7 +101,7 @@ class TripRepository {
           'tripId': updatedTrip.id,
           'gpx': gpxXml,
         }),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 3));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);

@@ -17,18 +17,72 @@ class WindRoseWidget extends StatelessWidget {
     this.isNightVision = false,
   });
 
+  String get headingCardinal {
+    final d = (headingDeg % 360 + 360) % 360;
+    if (d >= 337.5 || d < 22.5) return 'N';
+    if (d >= 22.5 && d < 67.5) return 'NE';
+    if (d >= 67.5 && d < 112.5) return 'E';
+    if (d >= 112.5 && d < 157.5) return 'SE';
+    if (d >= 157.5 && d < 202.5) return 'S';
+    if (d >= 202.5 && d < 247.5) return 'SW';
+    if (d >= 247.5 && d < 292.5) return 'W';
+    return 'NW';
+  }
+
   @override
   Widget build(BuildContext context) {
     return AspectRatio(
       aspectRatio: 1.0,
-      child: CustomPaint(
-        painter: _WindRosePainter(
-          headingDeg: headingDeg,
-          windDirectionDeg: windDirectionDeg,
-          windSpeedKnots: windSpeedKnots,
-          noGoZoneAngle: noGoZoneAngle,
-          isNightVision: isNightVision,
-        ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: Size.infinite,
+            painter: _WindRosePainter(
+              headingDeg: headingDeg,
+              windDirectionDeg: windDirectionDeg,
+              windSpeedKnots: windSpeedKnots,
+              noGoZoneAngle: noGoZoneAngle,
+              isNightVision: isNightVision,
+            ),
+          ),
+          // Top Digital Heading Readout Badge (HDG & Direction e.g. "042° NE")
+          Positioned(
+            top: 6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: (isNightVision ? const Color(0xFF2A0000) : const Color(0xFF071426))
+                    .withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isNightVision ? const Color(0xFFFF3B30) : const Color(0xFF00E5FF),
+                  width: 1.2,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.explore,
+                    size: 13,
+                    color: isNightVision ? const Color(0xFFFF3B30) : const Color(0xFF00E5FF),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    '${headingDeg.round().toString().padLeft(3, '0')}°  $headingCardinal',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                      color: isNightVision ? const Color(0xFFFF6B6B) : const Color(0xFF00E5FF),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -51,8 +105,8 @@ class _WindRosePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) / 2 - 14;
+    final center = Offset(size.width / 2, size.height / 2 + 6);
+    final radius = math.min(size.width, size.height) / 2 - 20;
 
     final primaryColor = isNightVision ? const Color(0xFFFF3B30) : const Color(0xFF00E5FF);
     final secondaryColor = isNightVision ? const Color(0xFF991B1B) : const Color(0xFF1E3A5F);
@@ -60,7 +114,7 @@ class _WindRosePainter extends CustomPainter {
 
     // Outer Bezel Ring
     final ringPaint = Paint()
-      ..color = secondaryColor.withValues(alpha: 0.6)
+      ..color = secondaryColor.withValues(alpha: 0.7)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
     canvas.drawCircle(center, radius, ringPaint);
@@ -71,38 +125,39 @@ class _WindRosePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, radius - 2, dialPaint);
 
-    // Compass ticks and labels
-    final tickPaint = Paint()
-      ..color = primaryColor.withValues(alpha: 0.7)
-      ..strokeWidth = 1.5;
+    // Compass ticks and degree labels
+    final tickPaint = Paint()..color = primaryColor.withValues(alpha: 0.7);
 
     final cardinalTextPainter = TextPainter(textDirection: TextDirection.ltr);
 
     for (int deg = 0; deg < 360; deg += 15) {
       final rad = (deg - 90) * math.pi / 180.0;
-      final isMajor = deg % 90 == 0;
-      final isMedium = deg % 45 == 0;
-      final len = isMajor ? 12.0 : (isMedium ? 8.0 : 4.0);
+      final isCardinal = deg % 90 == 0;
+      final isIntercardinal = deg % 45 == 0 && !isCardinal;
+      final len = isCardinal ? 13.0 : (isIntercardinal ? 8.0 : 4.0);
 
       final p1 = Offset(center.dx + radius * math.cos(rad), center.dy + radius * math.sin(rad));
       final p2 = Offset(center.dx + (radius - len) * math.cos(rad), center.dy + (radius - len) * math.sin(rad));
 
-      tickPaint.strokeWidth = isMajor ? 2.5 : 1.2;
-      tickPaint.color = isMajor ? primaryColor : primaryColor.withValues(alpha: 0.4);
+      tickPaint.strokeWidth = isCardinal ? 2.5 : (isIntercardinal ? 1.5 : 1.0);
+      tickPaint.color = isCardinal
+          ? primaryColor
+          : (isIntercardinal ? primaryColor.withValues(alpha: 0.7) : primaryColor.withValues(alpha: 0.35));
       canvas.drawLine(p1, p2, tickPaint);
 
-      if (isMajor) {
+      // Cardinal Labels (N, E, S, W)
+      if (isCardinal) {
         String label = '';
         if (deg == 0) label = 'N';
         if (deg == 90) label = 'E';
         if (deg == 180) label = 'S';
-        if (deg == 220 || deg == 270) label = 'W';
+        if (deg == 270) label = 'W';
 
         cardinalTextPainter.text = TextSpan(
           text: label,
           style: TextStyle(
             color: deg == 0 ? (isNightVision ? const Color(0xFFFF3B30) : const Color(0xFFFF5252)) : textColor,
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
         );
@@ -115,58 +170,59 @@ class _WindRosePainter extends CustomPainter {
     }
 
     // NO-GO ZONE (±45° relative to True Wind Direction)
-    // Wind comes from windDirectionDeg.
-    final noGoRadStart = (windDirectionDeg - noGoZoneAngle - 90) * math.pi / 180.0;
-    final sweepAngle = (noGoZoneAngle * 2) * math.pi / 180.0;
+    if (noGoZoneAngle > 0) {
+      final noGoRadStart = (windDirectionDeg - noGoZoneAngle - 90) * math.pi / 180.0;
+      final sweepAngle = (noGoZoneAngle * 2) * math.pi / 180.0;
 
-    final noGoPaint = Paint()
-      ..color = const Color(0xFFFF3B30).withValues(alpha: isNightVision ? 0.35 : 0.25)
-      ..style = PaintingStyle.fill;
+      final noGoPaint = Paint()
+        ..color = const Color(0xFFFF3B30).withValues(alpha: isNightVision ? 0.35 : 0.22)
+        ..style = PaintingStyle.fill;
 
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius - 30),
-      noGoRadStart,
-      sweepAngle,
-      true,
-      noGoPaint,
-    );
-
-    // TACKING SWEET SPOT ARROWS (Optimum Port & Starboard VMG angles)
-    final tackPaint = Paint()
-      ..color = primaryColor
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
-
-    for (final offset in [-noGoZoneAngle - 3, noGoZoneAngle + 3]) {
-      final tRad = (windDirectionDeg + offset - 90) * math.pi / 180.0;
-      final arrowPt = Offset(
-        center.dx + (radius - 32) * math.cos(tRad),
-        center.dy + (radius - 32) * math.sin(tRad),
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius - 30),
+        noGoRadStart,
+        sweepAngle,
+        true,
+        noGoPaint,
       );
-      canvas.drawLine(center, arrowPt, tackPaint);
+
+      // TACKING SWEET SPOT ARROWS
+      final tackPaint = Paint()
+        ..color = primaryColor
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+
+      for (final offset in [-noGoZoneAngle, noGoZoneAngle]) {
+        final tRad = (windDirectionDeg + offset - 90) * math.pi / 180.0;
+        final arrowPt = Offset(
+          center.dx + (radius - 32) * math.cos(tRad),
+          center.dy + (radius - 32) * math.sin(tRad),
+        );
+        canvas.drawLine(center, arrowPt, tackPaint);
+      }
     }
 
-    // TRUE WIND VECTOR (Arrow pointing in from wind direction towards center)
+    // TRUE WIND VECTOR (Arrow pointing into center)
     final windRad = (windDirectionDeg - 90) * math.pi / 180.0;
     final windArrowStart = Offset(
       center.dx + (radius - 4) * math.cos(windRad),
       center.dy + (radius - 4) * math.sin(windRad),
     );
     final windArrowEnd = Offset(
-      center.dx + (radius - 38) * math.cos(windRad),
-      center.dy + (radius - 38) * math.sin(windRad),
+      center.dx + (radius - 36) * math.cos(windRad),
+      center.dy + (radius - 36) * math.sin(windRad),
     );
 
     final windPaint = Paint()
       ..color = isNightVision ? const Color(0xFFFF3B30) : const Color(0xFF38BDF8)
-      ..strokeWidth = 4
+      ..strokeWidth = 3.5
       ..strokeCap = StrokeCap.round;
 
     canvas.drawLine(windArrowStart, windArrowEnd, windPaint);
 
-    // Draw Wind Barb head
+    // Arrow Head
     final headAngle = 0.45;
-    final headLen = 10.0;
+    final headLen = 9.0;
     final h1 = Offset(
       windArrowEnd.dx + headLen * math.cos(windRad + math.pi - headAngle),
       windArrowEnd.dy + headLen * math.sin(windRad + math.pi - headAngle),
@@ -178,10 +234,17 @@ class _WindRosePainter extends CustomPainter {
     canvas.drawLine(windArrowEnd, h1, windPaint);
     canvas.drawLine(windArrowEnd, h2, windPaint);
 
-    // BOAT SYMBOL at center (rotated according to headingDeg)
+    // BOAT SYMBOL at center rotated by headingDeg
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate((headingDeg) * math.pi / 180.0);
+
+    // Heading guideline extending out from bow
+    final guidePaint = Paint()
+      ..color = primaryColor.withValues(alpha: 0.6)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(const Offset(0, -22), Offset(0, -radius + 28), guidePaint);
 
     final boatPath = Path();
     boatPath.moveTo(0, -22); // Bow
@@ -205,12 +268,12 @@ class _WindRosePainter extends CustomPainter {
     // Wind Speed text in center bottom
     final speedPainter = TextPainter(
       text: TextSpan(
-        text: '${windSpeedKnots.toStringAsFixed(1)} KTS',
+        text: 'WIND ${windSpeedKnots.toStringAsFixed(1)} KTS',
         style: TextStyle(
           color: primaryColor,
-          fontSize: 12,
+          fontSize: 10.5,
           fontWeight: FontWeight.bold,
-          letterSpacing: 1.0,
+          letterSpacing: 0.8,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -218,7 +281,7 @@ class _WindRosePainter extends CustomPainter {
 
     speedPainter.paint(
       canvas,
-      Offset(center.dx - speedPainter.width / 2, center.dy + radius * 0.52),
+      Offset(center.dx - speedPainter.width / 2, center.dy + radius * 0.53),
     );
   }
 
@@ -227,6 +290,7 @@ class _WindRosePainter extends CustomPainter {
     return oldDelegate.headingDeg != headingDeg ||
         oldDelegate.windDirectionDeg != windDirectionDeg ||
         oldDelegate.windSpeedKnots != windSpeedKnots ||
-        oldDelegate.isNightVision != isNightVision;
+        oldDelegate.isNightVision != isNightVision ||
+        oldDelegate.noGoZoneAngle != noGoZoneAngle;
   }
 }

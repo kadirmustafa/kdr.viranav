@@ -62,6 +62,21 @@ class DatabaseService {
         await db.execute(
           'CREATE INDEX idx_gps_trip_id ON gps_points (trip_id)',
         );
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+          )
+        ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+          )
+        ''');
       },
     );
   }
@@ -135,5 +150,30 @@ class DatabaseService {
       [tripId],
     );
     return Sqflite.firstIntValue(res) ?? 0;
+  }
+
+  // Key-Value App Settings
+  Future<void> setSetting(String key, String value) async {
+    final db = await database;
+    await db.insert(
+      'app_settings',
+      {'key': key, 'value': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<String?> getSetting(String key) async {
+    final db = await database;
+    final res = await db.query(
+      'app_settings',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    if (res.isNotEmpty) {
+      return res.first['value'] as String?;
+    }
+    return null;
   }
 }

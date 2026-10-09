@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:viranav/core/theme/theme_provider.dart';
 import 'package:viranav/core/theme/app_theme.dart';
+import 'package:viranav/core/localization/app_localizations.dart';
 import 'package:viranav/core/providers/navigation_providers.dart';
 import 'package:viranav/features/anchor_watch/services/anchor_alarm_service.dart';
 
@@ -19,7 +20,8 @@ class _AnchorWatchScreenState extends ConsumerState<AnchorWatchScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isNightVision = ref.watch(themeModeProvider) == NavThemeMode.nightVisionRed;
+    final s = ref.watch(stringsProvider);
+    final isNightVision = ref.watch(isNightVisionProvider);
 
     final anchorService = ref.watch(anchorServiceProvider);
     final anchorState = ref.watch(anchorStateStreamProvider).value ?? anchorService.currentAnchorState;
@@ -39,7 +41,7 @@ class _AnchorWatchScreenState extends ConsumerState<AnchorWatchScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('DEMİR ALARMI & EMNİYET'),
+        title: Text(s.anchorTitle),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -61,55 +63,61 @@ class _AnchorWatchScreenState extends ConsumerState<AnchorWatchScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(Icons.warning, color: Colors.redAccent, size: 24),
-                            SizedBox(width: 8),
+                            const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 24),
+                            const SizedBox(width: 8),
                             Text(
-                              'MAN OVERBOARD (MOB)',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w900,
+                              s.mobEmergency,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                letterSpacing: 0.8,
                                 color: Colors.redAccent,
-                                letterSpacing: 1.2,
                               ),
                             ),
                           ],
                         ),
                         if (mobState.isActive)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: Colors.red,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Text('ACİL DURUM!', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                            child: const Text('ALARM', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                           ),
                       ],
                     ),
                     const SizedBox(height: 10),
                     if (mobState.isActive) ...[
                       Text(
-                        'Dönüş Kerterizi: ${mobState.returnBearingDeg.round()}°  |  Mesafe: ${mobState.distanceMeters.toStringAsFixed(0)} m',
+                        s.mobActive,
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Koordinat: ${mobState.mobLocation?.latitude.toStringAsFixed(5)}, ${mobState.mobLocation?.longitude.toStringAsFixed(5)}',
+                        'MOB Koordinat: ${mobState.mobLocation?.latitude.toStringAsFixed(4)}°N, ${mobState.mobLocation?.longitude.toStringAsFixed(4)}°E',
                         style: const TextStyle(fontSize: 12, color: Colors.white70),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Uzaklık: ${mobState.distanceMeters.toStringAsFixed(0)} metre  |  Kerteriz: ${mobState.returnBearingDeg.round()}°',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.amberAccent),
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black),
-                        icon: const Icon(Icons.check_circle),
-                        label: const Text('KAZAZEDE BULUNDU / MOB İPTAL'),
-                        onPressed: () {
-                          anchorService.clearMob();
-                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade800,
+                          foregroundColor: Colors.white,
+                        ),
+                        icon: const Icon(Icons.refresh),
+                        label: Text(s.mobReset),
+                        onPressed: () => anchorService.clearMob(),
                       ),
                     ] else ...[
                       const Text(
-                        'Denize adam düşmesi anında tek dokunuşla anlık GPS noktasını kilitler ve geri dönüş vektörü hesaplar.',
+                        'Acil durumda tek dokunuşla kazazedenin GPS koordinatını kilitler, sesli alarm başlatır ve geri dönüş rotasını çizer.',
                         style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                       const SizedBox(height: 12),
@@ -117,20 +125,14 @@ class _AnchorWatchScreenState extends ConsumerState<AnchorWatchScreen> {
                         width: double.infinity,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.redAccent.shade700,
+                            backgroundColor: Colors.red.shade700,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          icon: const Icon(Icons.sos, size: 28),
-                          label: const Text('MOB ACİL KİLİTLE (DENİZE ADAM DÜŞTÜ)', style: TextStyle(fontWeight: FontWeight.bold)),
+                          icon: const Icon(Icons.sos, size: 22),
+                          label: const Text('MOB ACİL DURUM BUTONU', style: TextStyle(fontWeight: FontWeight.bold)),
                           onPressed: () {
                             anchorService.triggerMob(currentPos);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('MOB KİLİTLENDİ! Geri dönüş vektörü aktif.'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
                           },
                         ),
                       ),
@@ -140,12 +142,12 @@ class _AnchorWatchScreenState extends ConsumerState<AnchorWatchScreen> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // ANCHOR WATCH (DEMİR ALARMI) CARD
             Card(
               color: isAlarmActive
-                  ? Colors.red.shade900.withValues(alpha: 0.5)
+                  ? Colors.red.shade900.withValues(alpha: 0.3)
                   : theme.cardTheme.color,
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -158,13 +160,14 @@ class _AnchorWatchScreenState extends ConsumerState<AnchorWatchScreen> {
                           children: [
                             Icon(
                               Icons.anchor,
-                              color: isNightVision ? AppTheme.nightRedPrimary : AppTheme.neonCyan,
-                              size: 24,
+                              color: isAlarmActive
+                                  ? Colors.redAccent
+                                  : (isNightVision ? AppTheme.nightRedPrimary : AppTheme.neonCyan),
                             ),
                             const SizedBox(width: 8),
-                            const Text(
-                              'DEMİR ALARMI (ANCHOR WATCH)',
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                            Text(
+                              anchorState.isArmed ? s.anchorLocked : s.anchorNotLocked,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                           ],
                         ),
@@ -173,30 +176,29 @@ class _AnchorWatchScreenState extends ConsumerState<AnchorWatchScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Visual Swing Ring Graphic
+                    // Visual Swinging Circle
                     Container(
                       height: 180,
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
+                        color: isNightVision ? AppTheme.nightSurface : const Color(0xFF071426),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isAlarmActive ? Colors.red : (isNightVision ? AppTheme.nightRedSecondary : Colors.blueGrey),
+                          color: (isAlarmActive ? Colors.redAccent : AppTheme.neonCyan).withValues(alpha: 0.3),
                         ),
                       ),
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Permitted Geofence boundary
+                          // Outer Swing Circle Boundary
                           Container(
                             width: 140,
                             height: 140,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: isAlarmActive ? Colors.red : AppTheme.successGreen,
+                                color: (isAlarmActive ? Colors.red : AppTheme.neonCyan).withValues(alpha: 0.7),
                                 width: 2,
-                                style: BorderStyle.solid,
                               ),
                               color: (isAlarmActive ? Colors.red : AppTheme.successGreen).withValues(alpha: 0.08),
                             ),
@@ -208,7 +210,7 @@ class _AnchorWatchScreenState extends ConsumerState<AnchorWatchScreen> {
                             bottom: 12,
                             child: Text(
                               anchorState.isArmed
-                                  ? 'Sürüklenme: ${anchorState.currentDistanceMeters.toStringAsFixed(1)} m / ${_chainScopeRadius.toStringAsFixed(0)} m'
+                                  ? '${s.currentDrift}: ${anchorState.currentDistanceMeters.toStringAsFixed(1)} m / ${_chainScopeRadius.toStringAsFixed(0)} m'
                                   : 'Demir serbest (Kilitlenmedi)',
                               style: TextStyle(
                                 fontSize: 12,
@@ -227,8 +229,8 @@ class _AnchorWatchScreenState extends ConsumerState<AnchorWatchScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Emniyet Yarıçapı (Kaloma):', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        Text('${_chainScopeRadius.round()} metre', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text('${s.radius}:', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text('${_chainScopeRadius.round()} m', style: const TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
                     Slider(
@@ -258,7 +260,7 @@ class _AnchorWatchScreenState extends ConsumerState<AnchorWatchScreen> {
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                               ),
                               icon: const Icon(Icons.arrow_upward),
-                              label: const Text('DEMİRİ AL (WEIGH ANCHOR)'),
+                              label: Text(s.raiseAnchor),
                               onPressed: () {
                                 anchorService.weighAnchor();
                               },
@@ -270,7 +272,7 @@ class _AnchorWatchScreenState extends ConsumerState<AnchorWatchScreen> {
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                               ),
                               icon: const Icon(Icons.anchor),
-                              label: const Text('DEMİR AT & KİLİTLE (DROP ANCHOR)', style: TextStyle(fontWeight: FontWeight.bold)),
+                              label: Text(s.dropAnchor, style: const TextStyle(fontWeight: FontWeight.bold)),
                               onPressed: () {
                                 anchorService.dropAnchor(
                                   position: currentPos,

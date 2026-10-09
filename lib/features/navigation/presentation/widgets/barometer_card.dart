@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:viranav/core/localization/app_localizations.dart';
 
 class BarometerCard extends StatelessWidget {
   final double pressureHpa;
   final double temperatureC;
   final int humidityPercent;
   final bool hasStormWarning;
+  final AppStrings strings;
+  final bool isNightVision;
+  final void Function(String metricKey)? onTapMetric;
 
   const BarometerCard({
     super.key,
@@ -12,12 +16,18 @@ class BarometerCard extends StatelessWidget {
     required this.temperatureC,
     required this.humidityPercent,
     required this.hasStormWarning,
+    required this.strings,
+    this.isNightVision = false,
+    this.onTapMetric,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isAlert = hasStormWarning || pressureHpa < 1000.0;
+    final primaryColor = isNightVision
+        ? const Color(0xFFFF3B30)
+        : (isAlert ? theme.colorScheme.error : theme.colorScheme.primary);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -25,7 +35,7 @@ class BarometerCard extends StatelessWidget {
         color: theme.cardTheme.color ?? theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isAlert ? theme.colorScheme.error : theme.colorScheme.primary.withValues(alpha: 0.2),
+          color: isAlert ? theme.colorScheme.error : primaryColor.withValues(alpha: 0.25),
           width: isAlert ? 1.5 : 1.0,
         ),
       ),
@@ -39,16 +49,16 @@ class BarometerCard extends StatelessWidget {
                   Icon(
                     Icons.speed,
                     size: 18,
-                    color: isAlert ? theme.colorScheme.error : theme.colorScheme.primary,
+                    color: primaryColor,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'BAROMETRİK BASINÇ & ATMOSFER',
+                    strings.barometerTitle,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1.0,
-                      color: isAlert ? theme.colorScheme.error : theme.colorScheme.primary,
+                      letterSpacing: 0.8,
+                      color: primaryColor,
                     ),
                   ),
                 ],
@@ -56,16 +66,15 @@ class BarometerCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: (isAlert ? theme.colorScheme.error : theme.colorScheme.primary)
-                      .withValues(alpha: 0.15),
+                  color: (isAlert ? theme.colorScheme.error : primaryColor).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  pressureHpa > 1013 ? 'Yüksek Basınç' : (pressureHpa < 1005 ? 'Alçak Basınç' : 'Normal'),
+                  pressureHpa > 1013 ? '1013+ hPa' : (pressureHpa < 1005 ? '<1005 hPa' : 'Kararlı'),
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: isAlert ? theme.colorScheme.error : theme.colorScheme.primary,
+                    color: primaryColor,
                   ),
                 ),
               ),
@@ -75,36 +84,60 @@ class BarometerCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildAtmosphereMetric(
-                context,
-                title: 'Basınç',
-                value: pressureHpa.toStringAsFixed(1),
-                unit: 'hPa',
-                icon: Icons.compress,
+              InkWell(
+                onTap: () => onTapMetric?.call('pressure'),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  child: _buildAtmosphereMetric(
+                    context,
+                    title: strings.pressureLabel,
+                    value: pressureHpa.toStringAsFixed(1),
+                    unit: 'hPa',
+                    icon: Icons.compress,
+                    primaryColor: primaryColor,
+                  ),
+                ),
               ),
               Container(
                 height: 36,
                 width: 1,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
               ),
-              _buildAtmosphereMetric(
-                context,
-                title: 'Sıcaklık',
-                value: temperatureC.toStringAsFixed(1),
-                unit: '°C',
-                icon: Icons.thermostat,
+              InkWell(
+                onTap: () => onTapMetric?.call('temperature'),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  child: _buildAtmosphereMetric(
+                    context,
+                    title: strings.tempLabel,
+                    value: temperatureC.toStringAsFixed(1),
+                    unit: '°C',
+                    icon: Icons.thermostat,
+                    primaryColor: primaryColor,
+                  ),
+                ),
               ),
               Container(
                 height: 36,
                 width: 1,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
               ),
-              _buildAtmosphereMetric(
-                context,
-                title: 'Nem',
-                value: '$humidityPercent',
-                unit: '%',
-                icon: Icons.water_drop_outlined,
+              InkWell(
+                onTap: () => onTapMetric?.call('humidity'),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  child: _buildAtmosphereMetric(
+                    context,
+                    title: strings.humidityLabel,
+                    value: '$humidityPercent',
+                    unit: '%',
+                    icon: Icons.water_drop_outlined,
+                    primaryColor: primaryColor,
+                  ),
+                ),
               ),
             ],
           ),
@@ -122,9 +155,9 @@ class BarometerCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Fırtına Habercisi: Kritik barometrik basınç düşüşü algılandı!',
+                      strings.stormWarningDesc,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.error,
                       ),
@@ -145,6 +178,7 @@ class BarometerCard extends StatelessWidget {
     required String value,
     required String unit,
     required IconData icon,
+    required Color primaryColor,
   }) {
     final theme = Theme.of(context);
     return Column(
@@ -152,9 +186,11 @@ class BarometerCard extends StatelessWidget {
         Text(
           title,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 10,
             color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 2),
         Row(
@@ -164,7 +200,7 @@ class BarometerCard extends StatelessWidget {
             Text(
               value,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -173,7 +209,7 @@ class BarometerCard extends StatelessWidget {
               unit,
               style: TextStyle(
                 fontSize: 10,
-                color: theme.colorScheme.primary,
+                color: primaryColor,
                 fontWeight: FontWeight.w600,
               ),
             ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
-enum NavThemeMode {
-  darkNavy,
-  nightVisionRed,
+enum AppThemeSelection {
+  dark, // Dark Navy
+  light, // Maritime Light
+  system, // Varolan / System Default
+  nightVision, // Night Vision Red
 }
 
 class AppTheme {
@@ -17,6 +19,14 @@ class AppTheme {
   static const Color warningAmber = Color(0xFFF59E0B);
   static const Color alertRed = Color(0xFFEF4444);
   static const Color successGreen = Color(0xFF10B981);
+
+  // --- Maritime Light Palette (High contrast in sunny cockpits) ---
+  static const Color lightBackground = Color(0xFFF1F5F9);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightCard = Color(0xFFFFFFFF);
+  static const Color oceanBlue = Color(0xFF0284C7);
+  static const Color deepSea = Color(0xFF0F172A);
+  static const Color lightBorder = Color(0xFFCBD5E1);
 
   // --- Night Vision Red Palette (for night watches & preserving captain's night vision) ---
   static const Color nightBackground = Color(0xFF0D0202);
@@ -57,15 +67,59 @@ class AppTheme {
         centerTitle: true,
         titleTextStyle: TextStyle(
           color: neonCyan,
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
+          letterSpacing: 1.1,
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: navyBackground,
         selectedItemColor: neonCyan,
         unselectedItemColor: navyTextSecondary,
+        type: BottomNavigationBarType.fixed,
+      ),
+    );
+  }
+
+  static ThemeData get lightMaritimeTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      scaffoldBackgroundColor: lightBackground,
+      colorScheme: const ColorScheme.light(
+        primary: oceanBlue,
+        onPrimary: Colors.white,
+        secondary: Color(0xFF0369A1),
+        onSecondary: Colors.white,
+        surface: lightSurface,
+        onSurface: deepSea,
+        error: alertRed,
+        onError: Colors.white,
+      ),
+      cardTheme: CardThemeData(
+        color: lightCard,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: lightBorder, width: 1),
+        ),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: lightSurface,
+        foregroundColor: deepSea,
+        elevation: 0.5,
+        centerTitle: true,
+        titleTextStyle: TextStyle(
+          color: oceanBlue,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.1,
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: lightSurface,
+        selectedItemColor: oceanBlue,
+        unselectedItemColor: Color(0xFF64748B),
         type: BottomNavigationBarType.fixed,
       ),
     );
@@ -101,9 +155,9 @@ class AppTheme {
         centerTitle: true,
         titleTextStyle: TextStyle(
           color: nightRedPrimary,
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
+          letterSpacing: 1.1,
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(

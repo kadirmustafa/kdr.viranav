@@ -1,22 +1,65 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:viranav/core/services/database_service.dart';
 import 'app_theme.dart';
 
-class ThemeModeNotifier extends Notifier<NavThemeMode> {
+class ThemeSelectionNotifier extends Notifier<AppThemeSelection> {
+  AppThemeSelection _previousTheme = AppThemeSelection.dark;
+
   @override
-  NavThemeMode build() {
-    return NavThemeMode.darkNavy;
+  AppThemeSelection build() {
+    _loadSavedTheme();
+    return AppThemeSelection.dark;
+  }
+
+  Future<void> _loadSavedTheme() async {
+    try {
+      final db = DatabaseService();
+      final saved = await db.getSetting('app_theme');
+      if (saved != null) {
+        switch (saved) {
+          case 'light':
+            state = AppThemeSelection.light;
+            break;
+          case 'system':
+            state = AppThemeSelection.system;
+            break;
+          case 'nightVision':
+            state = AppThemeSelection.nightVision;
+            break;
+          case 'dark':
+          default:
+            state = AppThemeSelection.dark;
+            break;
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> setTheme(AppThemeSelection mode) async {
+    if (state != AppThemeSelection.nightVision) {
+      _previousTheme = state;
+    }
+    state = mode;
+    try {
+      final db = DatabaseService();
+      await db.setSetting('app_theme', mode.name);
+    } catch (_) {}
   }
 
   void toggleNightVision() {
-    state = state == NavThemeMode.darkNavy
-        ? NavThemeMode.nightVisionRed
-        : NavThemeMode.darkNavy;
-  }
-
-  void setTheme(NavThemeMode mode) {
-    state = mode;
+    if (state == AppThemeSelection.nightVision) {
+      setTheme(_previousTheme);
+    } else {
+      _previousTheme = state;
+      setTheme(AppThemeSelection.nightVision);
+    }
   }
 }
 
-final themeModeProvider =
-    NotifierProvider<ThemeModeNotifier, NavThemeMode>(ThemeModeNotifier.new);
+final themeSelectionProvider =
+    NotifierProvider<ThemeSelectionNotifier, AppThemeSelection>(ThemeSelectionNotifier.new);
+
+// Convenience provider to check if Night Vision is active
+final isNightVisionProvider = Provider<bool>((ref) {
+  return ref.watch(themeSelectionProvider) == AppThemeSelection.nightVision;
+});

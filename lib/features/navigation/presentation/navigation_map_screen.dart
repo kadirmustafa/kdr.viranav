@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:viranav/core/theme/theme_provider.dart';
 import 'package:viranav/core/theme/app_theme.dart';
+import 'package:viranav/core/localization/app_localizations.dart';
 import 'package:viranav/core/constants/marine_constants.dart';
 import 'package:viranav/core/providers/navigation_providers.dart';
 import 'package:viranav/features/navigation/domain/route_engine.dart';
@@ -22,11 +24,11 @@ class _NavigationMapScreenState extends ConsumerState<NavigationMapScreen> {
   LatLng _currentBoatPos = const LatLng(36.985, 27.350);
   LatLng? _destinationPos;
   PlannedRoute? _calculatedRoute;
+  bool _isLocating = false;
 
   @override
   void initState() {
     super.initState();
-    // Default destination: Simi / Datça direction
     _destinationPos = const LatLng(36.850, 27.480);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _recalculateRoute();
@@ -37,7 +39,6 @@ class _NavigationMapScreenState extends ConsumerState<NavigationMapScreen> {
     if (_destinationPos == null) return;
     final vessel = ref.read(vesselProvider);
 
-    // Weather wind direction (assumed 330° Meltemi / NW wind)
     const windDirection = 340.0;
     const windSpeed = 16.0;
 
@@ -54,9 +55,48 @@ class _NavigationMapScreenState extends ConsumerState<NavigationMapScreen> {
     });
   }
 
+  Future<void> _centerOnCurrentLocation() async {
+    setState(() => _isLocating = true);
+    final s = ref.read(stringsProvider);
+    try {
+      final trackingState = ref.read(trackingStateStreamProvider).value;
+      if (trackingState?.lastPosition != null) {
+        final pos = trackingState!.lastPosition!;
+        final newCoord = LatLng(pos.latitude, pos.longitude);
+        setState(() {
+          _currentBoatPos = newCoord;
+        });
+        _mapController.move(newCoord, 13.5);
+        _recalculateRoute();
+      } else {
+        final position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 5),
+          ),
+        );
+        final newCoord = LatLng(position.latitude, position.longitude);
+        setState(() {
+          _currentBoatPos = newCoord;
+        });
+        _mapController.move(newCoord, 13.5);
+        _recalculateRoute();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${s.tripErrorMsg}$e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isNightVision = ref.watch(themeModeProvider) == NavThemeMode.nightVisionRed;
+    final s = ref.watch(stringsProvider);
+    final isNightVision = ref.watch(isNightVisionProvider);
     final vessel = ref.watch(vesselProvider);
     final trackingState = ref.watch(trackingStateStreamProvider).value;
 
@@ -67,23 +107,24 @@ class _NavigationMapScreenState extends ConsumerState<NavigationMapScreen> {
       );
     }
 
+    final primaryAccent = isNightVision ? AppTheme.nightRedPrimary : AppTheme.neonCyan;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SEYİR HARİTASI & ROTA'),
+        title: Text(s.mapTitle),
         actions: [
-          // Switch between Sailboat and Motor Yacht modes
           ActionChip(
             avatar: Icon(
               vessel.isSailboat ? Icons.sailing : Icons.directions_boat,
               size: 16,
-              color: isNightVision ? AppTheme.nightRedPrimary : AppTheme.neonCyan,
+              color: primaryAccent,
             ),
             label: Text(
-              vessel.isSailboat ? 'Yelkenli' : 'Motor Yat',
+              vessel.isSailboat ? s.sailboatMode : s.motorYachtMode,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: isNightVision ? AppTheme.nightRedPrimary : AppTheme.neonCyan,
+                color: primaryAccent,
               ),
             ),
             onPressed: () {
@@ -199,6 +240,27 @@ class _NavigationMapScreenState extends ConsumerState<NavigationMapScreen> {
             ],
           ),
 
+          // "MY LOCATION" FLOATING ACTION BUTTON
+          Positioned(
+            right: 16,
+            top: 16,
+            child: FloatingActionButton(
+              heroTag: 'map_my_location_btn',
+              mini: true,
+              backgroundColor: isNightVision ? AppTheme.nightRedPrimary : AppTheme.navySurface,
+              foregroundColor: isNightVision ? Colors.white : AppTheme.neonCyan,
+              tooltip: s.locateMeTooltip,
+              onPressed: _isLocating ? null : _centerOnCurrentLocation,
+              child: _isLocating
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.my_location),
+            ),
+          ),
+
           // Route Information Overlay Panel at Bottom
           if (_calculatedRoute != null)
             Positioned(
@@ -230,20 +292,18 @@ class _NavigationMapScreenState extends ConsumerState<NavigationMapScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                _calculatedRoute!.requiresTacking
-                                    ? 'YELKEN TRAMOLA ROTASI'
-                                    : 'DOĞRUDAN SEYİR ROTASI',
+                                _calculatedRoute!.requiresTacking ? s.tackRoute : s.directRoute,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                                  fontSize: 12,
                                   color: isNightVision ? AppTheme.nightRedPrimary : AppTheme.neonCyan,
                                 ),
                               ),
                             ],
                           ),
                           Text(
-                            'Sığlık Limiti: >${_calculatedRoute!.minSafeDepthMeters.toStringAsFixed(1)}m',
-                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            '${s.shallowWaterLimit}: >${_calculatedRoute!.minSafeDepthMeters.toStringAsFixed(1)}m',
+                            style: const TextStyle(fontSize: 10, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -251,12 +311,12 @@ class _NavigationMapScreenState extends ConsumerState<NavigationMapScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _buildStatItem('Mesafe', '${_calculatedRoute!.totalDistanceNm.toStringAsFixed(1)} NM'),
-                          _buildStatItem('Tahmini Süre', '${_calculatedRoute!.estimatedTimeHours.toStringAsFixed(1)} Sa'),
+                          _buildStatItem(s.distance, '${_calculatedRoute!.totalDistanceNm.toStringAsFixed(1)} NM'),
+                          _buildStatItem(s.estimatedTime, '${_calculatedRoute!.estimatedTimeHours.toStringAsFixed(1)} ${s.hoursUnit}'),
                           if (vessel.isMotorYacht)
-                            _buildStatItem('Yakıt', '${_calculatedRoute!.estimatedFuelLiters.round()} L')
+                            _buildStatItem(s.fuelUsage, '${_calculatedRoute!.estimatedFuelLiters.round()} L')
                           else
-                            _buildStatItem('VMG Hızı', '${_calculatedRoute!.vmgKnots.toStringAsFixed(1)} kn'),
+                            _buildStatItem(s.vmgSpeed, '${_calculatedRoute!.vmgKnots.toStringAsFixed(1)} kn'),
                         ],
                       ),
                       if (_calculatedRoute!.requiresTacking) ...[
@@ -267,14 +327,14 @@ class _NavigationMapScreenState extends ConsumerState<NavigationMapScreen> {
                             color: Colors.amber.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Row(
+                          child: Row(
                             children: [
-                              Icon(Icons.info_outline, size: 14, color: Colors.amber),
-                              SizedBox(width: 6),
+                              const Icon(Icons.info_outline, size: 14, color: Colors.amber),
+                              const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  'Rüzgara karşı ±45° kör açı engellendi. Tramola zikzakları ile varış hesaplandı.',
-                                  style: TextStyle(fontSize: 10, color: Colors.amber),
+                                  s.tackingNotice,
+                                  style: const TextStyle(fontSize: 10, color: Colors.amber),
                                 ),
                               ),
                             ],
@@ -294,9 +354,9 @@ class _NavigationMapScreenState extends ConsumerState<NavigationMapScreen> {
   Widget _buildStatItem(String title, String value) {
     return Column(
       children: [
-        Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        Text(title, style: const TextStyle(fontSize: 10, color: Colors.grey)),
         const SizedBox(height: 2),
-        Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
       ],
     );
   }
