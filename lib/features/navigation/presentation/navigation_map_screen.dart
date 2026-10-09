@@ -59,29 +59,67 @@ class _NavigationMapScreenState extends ConsumerState<NavigationMapScreen> {
     setState(() => _isLocating = true);
     final s = ref.read(stringsProvider);
     try {
-      final trackingState = ref.read(trackingStateStreamProvider).value;
-      if (trackingState?.lastPosition != null) {
-        final pos = trackingState!.lastPosition!;
-        final newCoord = LatLng(pos.latitude, pos.longitude);
-        setState(() {
-          _currentBoatPos = newCoord;
-        });
-        _mapController.move(newCoord, 13.5);
-        _recalculateRoute();
-      } else {
-        final position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            timeLimit: Duration(seconds: 5),
-          ),
-        );
-        final newCoord = LatLng(position.latitude, position.longitude);
-        setState(() {
-          _currentBoatPos = newCoord;
-        });
-        _mapController.move(newCoord, 13.5);
-        _recalculateRoute();
+      // 1. Check if location services (GPS) are enabled
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('GPS kapalı. Lütfen konumu açınız / Please turn on GPS'),
+              action: SnackBarAction(
+                label: 'Ayarlar',
+                onPressed: () => Geolocator.openLocationSettings(),
+              ),
+            ),
+          );
+        }
+        return;
       }
+
+      // 2. Check and actively request permission if denied
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Konum izni verilmedi / Location permission denied')),
+            );
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Konum izni kalıcı reddedildi / Location permission permanently denied'),
+              action: SnackBarAction(
+                label: 'Ayarlar',
+                onPressed: () => Geolocator.openAppSettings(),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      // 3. Obtain position (try fast cached position first, then fresh accurate fix)
+      Position? position = await Geolocator.getLastKnownPosition();
+      position ??= await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
+
+      final newCoord = LatLng(position.latitude, position.longitude);
+      setState(() {
+        _currentBoatPos = newCoord;
+      });
+      _mapController.move(newCoord, 14.0);
+      _recalculateRoute();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:viranav/core/theme/theme_provider.dart';
 import 'package:viranav/core/theme/app_theme.dart';
 import 'package:viranav/core/localization/app_localizations.dart';
-import 'package:viranav/core/providers/navigation_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -14,7 +13,6 @@ class SettingsScreen extends ConsumerWidget {
     final currentLangCode = ref.watch(languageProvider);
     final currentTheme = ref.watch(themeSelectionProvider);
     final isNightVision = ref.watch(isNightVisionProvider);
-    final vessel = ref.watch(vesselProvider);
 
     final primaryAccent = isNightVision ? AppTheme.nightRedPrimary : AppTheme.neonCyan;
 
@@ -151,65 +149,6 @@ class SettingsScreen extends ConsumerWidget {
 
             const SizedBox(height: 20),
 
-            // VESSEL PROFILE SECTION
-            _buildSectionHeader(context, s.vesselProfileSection, Icons.directions_boat, primaryAccent),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              vessel.isSailboat ? Icons.sailing : Icons.directions_boat,
-                              color: primaryAccent,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              vessel.name,
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        Switch(
-                          value: vessel.isSailboat,
-                          activeThumbColor: primaryAccent,
-                          onChanged: (_) {
-                            ref.read(vesselProvider.notifier).toggleType();
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        '${s.vesselType}: ${vessel.isSailboat ? s.sailboatMode : s.motorYachtMode}',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ),
-                    const Divider(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildSpecItem(s.vesselDraft, '${vessel.draftMeters.toStringAsFixed(1)} m'),
-                        _buildSpecItem('LOA', '${vessel.lengthMeters.toStringAsFixed(1)} m'),
-                        if (vessel.isSailboat)
-                          _buildSpecItem(s.noGoAngle, '±${vessel.noGoZoneAngle.round()}°')
-                        else
-                          _buildSpecItem(s.fuelBurnRate, '${vessel.fuelBurnLitersPerHour.round()} L/h'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
             // APP INFORMATION
             _buildSectionHeader(context, s.appInfoSection, Icons.info_outline, primaryAccent),
             Card(
@@ -320,16 +259,6 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSpecItem(String label, String value) {
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-        const SizedBox(height: 2),
-        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-      ],
     );
   }
 }
