@@ -11,16 +11,12 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
-    final currentLang = ref.watch(languageProvider);
+    final currentLangCode = ref.watch(languageProvider);
     final currentTheme = ref.watch(themeSelectionProvider);
     final isNightVision = ref.watch(isNightVisionProvider);
     final vessel = ref.watch(vesselProvider);
-    final checklist = ref.watch(checklistProvider);
 
     final primaryAccent = isNightVision ? AppTheme.nightRedPrimary : AppTheme.neonCyan;
-
-    final completedCount = checklist.where((c) => c.isCompleted).length;
-    final totalCount = checklist.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -31,31 +27,74 @@ class SettingsScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // LANGUAGE SELECTION SECTION
+            // MULTI-LANGUAGE SELECTION SECTION (EN, TR, IT, ES, FR, DE, AR, RU, EL, PT, NL)
             _buildSectionHeader(context, s.languageSection, Icons.language, primaryAccent),
             Card(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Column(
-                  children: [
-                    _buildLanguageTile(
-                      ref: ref,
-                      title: 'English (Default)',
-                      subtitle: 'Global maritime standard',
-                      lang: AppLanguage.en,
-                      currentLang: currentLang,
-                      accent: primaryAccent,
-                    ),
-                    const Divider(height: 1),
-                    _buildLanguageTile(
-                      ref: ref,
-                      title: 'Türkçe',
-                      subtitle: 'Türkçe denizcilik terimleri',
-                      lang: AppLanguage.tr,
-                      currentLang: currentLang,
-                      accent: primaryAccent,
-                    ),
-                  ],
+                  children: LocaleNotifier.supportedLanguages.map((lang) {
+                    final isSelected = lang.code == currentLangCode;
+                    return InkWell(
+                      onTap: () {
+                        ref.read(languageProvider.notifier).setLanguage(lang.code);
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        margin: const EdgeInsets.symmetric(vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? primaryAccent.withValues(alpha: 0.12)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          border: isSelected
+                              ? Border.all(color: primaryAccent.withValues(alpha: 0.5), width: 1.2)
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              lang.flag,
+                              style: const TextStyle(fontSize: 22),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    lang.nativeName,
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                      fontSize: 14,
+                                      color: isSelected ? primaryAccent : null,
+                                    ),
+                                  ),
+                                  Text(
+                                    lang.name,
+                                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              Icon(
+                                Icons.check_circle,
+                                color: primaryAccent,
+                                size: 20,
+                              )
+                            else
+                              const Icon(
+                                Icons.circle_outlined,
+                                color: Colors.grey,
+                                size: 18,
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
             ),
@@ -171,83 +210,6 @@ class SettingsScreen extends ConsumerWidget {
 
             const SizedBox(height: 20),
 
-            // PRE-VOYAGE SAFETY CHECKLIST
-            _buildSectionHeader(context, s.safetyChecklist, Icons.checklist, primaryAccent),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            s.safetyChecklistDesc,
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ),
-                        Text(
-                          '$completedCount / $totalCount',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: completedCount == totalCount ? Colors.greenAccent : primaryAccent,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: totalCount > 0 ? completedCount / totalCount : 0.0,
-                        backgroundColor: Colors.grey.withValues(alpha: 0.2),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          completedCount == totalCount ? Colors.green : primaryAccent,
-                        ),
-                        minHeight: 6,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...checklist.map((item) {
-                      return CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
-                        title: Text(
-                          item.title,
-                          style: TextStyle(
-                            fontSize: 13,
-                            decoration: item.isCompleted ? TextDecoration.lineThrough : null,
-                            color: item.isCompleted ? Colors.grey : null,
-                          ),
-                        ),
-                        subtitle: Text(item.category, style: const TextStyle(fontSize: 11)),
-                        value: item.isCompleted,
-                        activeColor: primaryAccent,
-                        onChanged: (_) {
-                          ref.read(checklistProvider.notifier).toggleItem(item.id);
-                        },
-                      );
-                    }),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        icon: const Icon(Icons.restart_alt, size: 16),
-                        label: const Text('Sıfırla / Reset', style: TextStyle(fontSize: 12)),
-                        onPressed: () {
-                          ref.read(checklistProvider.notifier).resetAll();
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
             // APP INFORMATION
             _buildSectionHeader(context, s.appInfoSection, Icons.info_outline, primaryAccent),
             Card(
@@ -290,42 +252,6 @@ class SettingsScreen extends ConsumerWidget {
             ),
 
             const SizedBox(height: 28),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLanguageTile({
-    required WidgetRef ref,
-    required String title,
-    required String subtitle,
-    required AppLanguage lang,
-    required AppLanguage currentLang,
-    required Color accent,
-  }) {
-    final isSelected = lang == currentLang;
-    return InkWell(
-      onTap: () => ref.read(languageProvider.notifier).setLanguage(lang),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Row(
-          children: [
-            Icon(
-              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: isSelected ? accent : Colors.grey,
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                ],
-              ),
-            ),
           ],
         ),
       ),

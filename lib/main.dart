@@ -52,14 +52,19 @@ class ViraNavApp extends ConsumerWidget {
         break;
     }
 
+    final isRtl = ref.watch(isRtlProvider);
+
     return MaterialApp(
       title: 'ViraNav',
       debugShowCheckedModeBanner: false,
-      locale: Locale(lang.name),
+      locale: Locale(lang),
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: mode,
-      home: const MainNavigationShell(),
+      home: Directionality(
+        textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+        child: const MainNavigationShell(),
+      ),
     );
   }
 }
