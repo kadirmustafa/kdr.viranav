@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "960606412966",
+    "project_id": "viranav-app",
+    "storage_bucket": "viranav-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:960606412966:android:e6f69567d611a5d4e69467",
+        "android_client_info": {
+          "package_name": "com.viranav.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6BEETHP5MK5ICRwdC9uxk6G_IMkVgI3M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
