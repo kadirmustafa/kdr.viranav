@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Tack indicator: Wind from top, ±45 deg no-go zone wedge, starboard and port tack arrows -->
+  <circle cx="50" cy="50" r="44" stroke="#334155" stroke-width="2"/>
+  <!-- No-Go Zone 90 degree wedge at top -->
+  <path d="M 50 50 L 20 18 A 44 44 0 0 1 80 18 Z" fill="#FF3B30" fill-opacity="0.35" stroke="#FF3B30" stroke-width="1.5"/>
+  <!-- Port and Starboard Tack Optimum arrows -->
+  <path d="M 50 50 L 18 20" stroke="#00E5FF" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 50 50 L 82 20" stroke="#00E5FF" stroke-width="3" stroke-linecap="round"/>
+  <!-- Boat center -->
+  <polygon points="50,38 56,58 44,58" fill="#FFFFFF"/>
+</svg>

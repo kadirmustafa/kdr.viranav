@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Motor Yacht silhouette -->
+  <!-- Flybridge / Radar Arch -->
+  <path d="M 40 38 L 48 30 L 64 30 L 62 38 Z" fill="#94A3B8"/>
+  <line x1="58" y1="30" x2="58" y2="24" stroke="#00E5FF" stroke-width="2"/>
+  <ellipse cx="58" cy="23" rx="5" ry="2" fill="#00E5FF"/>
+  <!-- Cabin Superstructure -->
+  <path d="M 28 54 L 36 38 L 74 38 L 70 54 Z" fill="#E2E8F0"/>
+  <!-- Windows -->
+  <path d="M 38 48 L 42 42 L 64 42 L 62 48 Z" fill="#0A192F"/>
+  <!-- Main Hull -->
+  <path d="M 12 56 L 78 56 L 94 66 L 82 78 L 14 78 Z" fill="#FFFFFF"/>
+  <path d="M 14 74 L 84 74 L 80 78 L 14 78 Z" fill="#00E5FF"/>
+</svg>

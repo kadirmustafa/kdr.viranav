@@ -1,0 +1,13 @@
+{
+  "name": "viranav-marine-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker proxy with KV caching for ViraNav marine weather and R2 trip logbook",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

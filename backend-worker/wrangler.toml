@@ -1,0 +1,11 @@
+name = "viranav-marine-worker"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "WEATHER_CACHE"
+id = "YOUR_CLOUDFLARE_KV_ID"
+
+[[r2_buckets]]
+binding = "TRIP_BUCKET"
+bucket_name = "viranav-trips"

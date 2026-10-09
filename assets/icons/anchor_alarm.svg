@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Anchor circle boundary (geofence) -->
+  <circle cx="50" cy="50" r="42" stroke="#FF5722" stroke-width="2" stroke-dasharray="4 4"/>
+  <circle cx="50" cy="50" r="42" fill="#FF5722" fill-opacity="0.1"/>
+  <!-- Center Anchor -->
+  <circle cx="50" cy="24" r="5" stroke="#FFFFFF" stroke-width="3"/>
+  <line x1="50" y1="29" x2="50" y2="72" stroke="#FFFFFF" stroke-width="4"/>
+  <line x1="36" y1="40" x2="64" y2="40" stroke="#FFFFFF" stroke-width="4"/>
+  <path d="M 28 55 C 32 75, 68 75, 72 55" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+  <polygon points="26,57 28,49 34,55" fill="#FFFFFF"/>
+  <polygon points="74,57 72,49 66,55" fill="#FFFFFF"/>
+</svg>

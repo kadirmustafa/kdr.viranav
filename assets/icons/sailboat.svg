@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Sailboat silhouette -->
+  <!-- Mast -->
+  <line x1="48" y1="12" x2="48" y2="72" stroke="#FFFFFF" stroke-width="2.5"/>
+  <!-- Mainsail -->
+  <path d="M 46 16 L 46 68 L 18 68 Z" fill="#00E5FF"/>
+  <!-- Jib -->
+  <path d="M 52 24 L 52 68 L 82 68 Z" fill="#38BDF8"/>
+  <!-- Hull -->
+  <path d="M 12 74 L 88 74 L 76 86 L 24 86 Z" fill="#E2E8F0"/>
+  <!-- Keel -->
+  <polygon points="46,86 54,86 52,94 48,94" fill="#94A3B8"/>
+</svg>
