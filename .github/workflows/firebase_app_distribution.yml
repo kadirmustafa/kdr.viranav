@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-and-distribute:
-    name: Build APK and Distribute to Firebase Testers
+    name: Build APK, AAB and Distribute
     runs-on: ubuntu-latest
 
     steps:
@@ -48,14 +48,29 @@ jobs:
       - name: 7. Run Unit & Widget Tests
         run: flutter test
 
-      - name: 8. Build Release APK
-        run: flutter build apk --release
+      - name: 7.5. Decode Android Release Keystore
+        run: |
+          echo "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" | base64 --decode > android/app/upload-keystore.jks
+
+      - name: 8. Build Signed Release APK & Google Play AAB
+        env:
+          KEYSTORE_PASSWORD: viranav2026password
+        run: |
+          flutter build apk --release --build-name=1.0.0 --build-number=${{ github.run_number }}
+          flutter build appbundle --release --build-name=1.0.0 --build-number=${{ github.run_number }}
 
       - name: 9. Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: viranav-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14
+
+      - name: 9.5. Upload Google Play AAB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: viranav-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 14
 
       - name: 10. Distribute to Firebase App Distribution
