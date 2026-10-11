@@ -1,9 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:viranav/features/navigation/presentation/widgets/wind_rose_widget.dart';
+import 'package:viranav/features/navigation/presentation/widgets/marine_compass_widget.dart';
 import 'package:viranav/features/navigation/presentation/widgets/hud_data_tile.dart';
 
 void main() {
+  testWidgets('MarineCompassWidget renders with needle and heading text', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: MarineCompassWidget(
+            headingDeg: 45.0,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(MarineCompassWidget), findsOneWidget);
+    expect(find.text('045°  NE'), findsOneWidget);
+  });
+
   testWidgets('WindRoseWidget renders correctly', (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(

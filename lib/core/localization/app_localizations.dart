@@ -362,6 +362,48 @@ class ViraNavStrings {
     'nl': 'Stroomrichting',
   });
 
+  String get compassTitle => _t({
+    'en': 'MARINE COMPASS & HEADING',
+    'tr': 'DENİZ PUSULASI & YÖN (HDG)',
+    'it': 'BUSSOLA MARINA & PRUA',
+    'es': 'BRÚJULA MARINA Y RUMBO',
+    'fr': 'COMPAS MARIN & CAP',
+    'de': 'MARINEKOMPASS & KURS',
+    'ar': 'البوصلة البحرية والاتجاه',
+    'ru': 'МОРСКОЙ КОМПАС И КУРС',
+    'el': 'ΝΑΥΤΙΚΗ ΠΥΞΙΔΑ & ΠΟΡΕΙΑ',
+    'pt': 'BÚSSOLA NÁUTICA & RUMO',
+    'nl': 'SCHEEPSKOMPAS & KOERS',
+  });
+
+  String get compassMode => _t({
+    'en': 'Compass',
+    'tr': 'Pusula',
+    'it': 'Bussola',
+    'es': 'Brújula',
+    'fr': 'Compas',
+    'de': 'Kompass',
+    'ar': 'بوصلة',
+    'ru': 'Компас',
+    'el': 'Πυξίδα',
+    'pt': 'Bússola',
+    'nl': 'Kompas',
+  });
+
+  String get windRoseMode => _t({
+    'en': 'Wind Rose',
+    'tr': 'Rüzgar Gülü',
+    'it': 'Rosa dei Venti',
+    'es': 'Rosa de los Vientos',
+    'fr': 'Rose des Vents',
+    'de': 'Windrose',
+    'ar': 'وردة الرياح',
+    'ru': 'Роза ветров',
+    'el': 'Ανεμολόγιο',
+    'pt': 'Rosa dos Ventos',
+    'nl': 'Windroos',
+  });
+
   String get windRoseTitle => _t({
     'en': 'WIND ROSE & TACK INDICATOR',
     'tr': 'RÜZGAR GÜLÜ & TRAMOLA (TACK) GÖSTERGESİ',

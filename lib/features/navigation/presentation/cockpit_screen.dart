@@ -4,6 +4,7 @@ import 'package:viranav/core/theme/theme_provider.dart';
 import 'package:viranav/core/theme/app_theme.dart';
 import 'package:viranav/core/localization/app_localizations.dart';
 import 'package:viranav/core/providers/navigation_providers.dart';
+import 'widgets/marine_compass_widget.dart';
 import 'widgets/wind_rose_widget.dart';
 import 'widgets/hud_data_tile.dart';
 import 'widgets/barometer_card.dart';
@@ -17,6 +18,8 @@ class CockpitScreen extends ConsumerStatefulWidget {
 }
 
 class _CockpitScreenState extends ConsumerState<CockpitScreen> {
+  bool _showWindRose = false;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -36,13 +39,10 @@ class _CockpitScreenState extends ConsumerState<CockpitScreen> {
     final weather = weatherAsync.value;
 
     final sog = trackingState.currentSogKnots;
-    final cog = trackingState.currentCogDeg;
     final twd = weather?.windDirectionDeg ?? 65.0;
     final tws = weather?.windSpeedKnots ?? 14.0;
     final waveHs = weather?.waveHeightMeters ?? 0.8;
     final waveTp = weather?.wavePeriodSeconds ?? 5.5;
-    final currentKnots = weather?.currentVelocityKnots ?? 0.4;
-    final currentDeg = weather?.currentDirectionDeg ?? 180.0;
     final pressureHpa = weather?.surfacePressure ?? 1013.2;
     final tempC = weather?.temperature ?? 22.4;
     final humidityPct = weather?.relativeHumidity ?? 68;
@@ -153,7 +153,144 @@ class _CockpitScreenState extends ConsumerState<CockpitScreen> {
                 ),
               ),
 
-            // PRIMARY NAVIGATION HUD (SOG, HDG, COG, TWS)
+            // REAL NAUTICAL COMPASS & HEADING INSTRUMENT (CENTERPIECE)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _showWindRose ? Icons.air : Icons.explore,
+                              size: 16,
+                              color: primaryAccent,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _showWindRose ? s.windRoseTitle : s.compassTitle,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.8,
+                                color: primaryAccent,
+                              ),
+                            ),
+                          ],
+                        ),
+                        // Toggle Switch between Real Compass & Wind Rose
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _showWindRose = !_showWindRose;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: primaryAccent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: primaryAccent.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _showWindRose ? Icons.explore : Icons.sailing,
+                                  size: 13,
+                                  color: primaryAccent,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _showWindRose ? s.compassMode : s.windRoseMode,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryAccent,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (!_showWindRose) ...[
+                      // Real Marine Compass with 3D Needle (İbre)
+                      MarineCompassWidget(
+                        headingDeg: headingDeg,
+                        isNightVision: isNightVision,
+                        size: 240,
+                        onTap: () => MetricDetailSheet.show(
+                          context,
+                          type: MetricType.hdg,
+                          value: headingDeg,
+                          strings: s,
+                          isNightVision: isNightVision,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${_headingCardinal(headingDeg)} • ${s.hdgLabel}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: primaryAccent,
+                            ),
+                          ),
+                          Text(
+                            vessel.isSailboat ? s.sailboatMode : s.motorYachtMode,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      // Wind Rose & Sailing Tack Indicator
+                      SizedBox(
+                        height: 240,
+                        child: WindRoseWidget(
+                          headingDeg: headingDeg,
+                          windDirectionDeg: twwdCorrected(twd),
+                          windSpeedKnots: tws,
+                          noGoZoneAngle: vessel.isSailboat ? vessel.noGoZoneAngle : 0.0,
+                          isNightVision: isNightVision,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _legendDot(const Color(0xFFFF3B30), s.noGoZone),
+                          const SizedBox(width: 14),
+                          _legendDot(
+                            primaryAccent,
+                            s.optimumTack,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // PRIMARY SPEED & WIND HUD (SOG & TWS) - 2 Symmetrical Columns
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
@@ -177,34 +314,6 @@ class _CockpitScreenState extends ConsumerState<CockpitScreen> {
                   ),
                 ),
                 HudDataTile(
-                  label: s.hdgLabel,
-                  value: '${headingDeg.round()}°',
-                  unit: 'MAG',
-                  icon: Icons.explore,
-                  subtitle: '${_headingCardinal(headingDeg)} • Pusula',
-                  onTap: () => MetricDetailSheet.show(
-                    context,
-                    type: MetricType.hdg,
-                    value: headingDeg,
-                    strings: s,
-                    isNightVision: isNightVision,
-                  ),
-                ),
-                HudDataTile(
-                  label: s.cogLabel,
-                  value: '${cog.round()}°',
-                  unit: 'TRUE',
-                  icon: Icons.navigation_outlined,
-                  subtitle: s.trueCourse,
-                  onTap: () => MetricDetailSheet.show(
-                    context,
-                    type: MetricType.cog,
-                    value: cog,
-                    strings: s,
-                    isNightVision: isNightVision,
-                  ),
-                ),
-                HudDataTile(
                   label: s.twsLabel,
                   value: tws.toStringAsFixed(1),
                   unit: s.knotsUnit,
@@ -222,73 +331,16 @@ class _CockpitScreenState extends ConsumerState<CockpitScreen> {
               ],
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
 
-            // WIND ROSE (RÜZGAR GÜLÜ & TACK GÖSTERGESİ & PUSULA)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          s.windRoseTitle,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.8,
-                            color: primaryAccent,
-                          ),
-                        ),
-                        Text(
-                          vessel.isSailboat ? '±${vessel.noGoZoneAngle.round()}° Kör Açı' : s.motorYachtMode,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            color: theme.textTheme.bodySmall?.color,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 250,
-                      child: WindRoseWidget(
-                        headingDeg: headingDeg,
-                        windDirectionDeg: twwdCorrected(twd),
-                        windSpeedKnots: tws,
-                        noGoZoneAngle: vessel.isSailboat ? vessel.noGoZoneAngle : 0.0,
-                        isNightVision: isNightVision,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _legendDot(const Color(0xFFFF3B30), s.noGoZone),
-                        const SizedBox(width: 14),
-                        _legendDot(
-                          primaryAccent,
-                          s.optimumTack,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            // OCEANOGRAPHY & WAVES HUD (Hs, Tp, Akıntı)
+            // OCEANOGRAPHY & WAVES HUD (Hs, Tp) - 2 Symmetrical Columns
             GridView.count(
-              crossAxisCount: 3,
+              crossAxisCount: 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 1.15,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
+              childAspectRatio: 1.65,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
               children: [
                 HudDataTile(
                   label: s.waveHeight,
@@ -318,25 +370,10 @@ class _CockpitScreenState extends ConsumerState<CockpitScreen> {
                     isNightVision: isNightVision,
                   ),
                 ),
-                HudDataTile(
-                  label: s.surfaceCurrent,
-                  value: currentKnots.toStringAsFixed(1),
-                  unit: s.knotsUnit,
-                  icon: Icons.water,
-                  subtitle: '${currentDeg.round()}° Yön',
-                  onTap: () => MetricDetailSheet.show(
-                    context,
-                    type: MetricType.current,
-                    value: currentKnots,
-                    secondaryValue: currentDeg,
-                    strings: s,
-                    isNightVision: isNightVision,
-                  ),
-                ),
               ],
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
 
             // BAROMETRIC PRESSURE & STORM PREDICTION
             BarometerCard(

@@ -5,9 +5,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/localization/app_localizations.dart';
 import 'features/navigation/presentation/cockpit_screen.dart';
-import 'features/navigation/presentation/navigation_map_screen.dart';
 import 'features/logbook/presentation/logbook_screen.dart';
-import 'features/anchor_watch/presentation/anchor_watch_screen.dart';
 import 'features/settings/presentation/settings_screen.dart';
 
 Future<void> main() async {
@@ -81,9 +79,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
 
   final List<Widget> _screens = const [
     CockpitScreen(),
-    NavigationMapScreen(),
     LogbookScreen(),
-    AnchorWatchScreen(),
     SettingsScreen(),
   ];
 
@@ -110,19 +106,9 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
             label: s.navCockpit,
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.map_outlined),
-            activeIcon: const Icon(Icons.map),
-            label: s.navMap,
-          ),
-          BottomNavigationBarItem(
             icon: const Icon(Icons.menu_book_outlined),
             activeIcon: const Icon(Icons.menu_book),
             label: s.navLogbook,
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.anchor_outlined),
-            activeIcon: const Icon(Icons.anchor),
-            label: s.navAnchor,
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.settings_outlined),
